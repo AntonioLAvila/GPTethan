@@ -1,1 +1,1 @@
-# GPEthan
+# GPTethan
