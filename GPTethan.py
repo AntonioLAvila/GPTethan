@@ -2,6 +2,11 @@ import torch
 import torch.nn as nn
 import numpy as np
 
+if torch.cuda.is_available():  
+  dev = "cuda:0" 
+else:  
+  dev = "cpu"
+
 class MultiHeadAttention(nn.Module):
     def __init__(self, d_model, n_heads):
         super(MultiHeadAttention, self).__init__()
