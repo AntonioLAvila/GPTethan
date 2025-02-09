@@ -1,5 +1,7 @@
 import sqlite3
 import re
+import torch
+import pickle
 
 DB = "/home/antonio/dht/archive.dht"
 ethan_id = 791492026986135592
@@ -77,9 +79,9 @@ def vocab_mapping(messages: list[str]):
     '''
     return map of word id number to word and vice versa
     '''
-    id_to_word = {}
-    word_to_id = {}
-    i = 0
+    id_to_word = {0: ' '}
+    word_to_id = {' ': 0}
+    i = 1
     for msg in messages:
         for word in msg:
             if word not in id_to_word:
@@ -88,3 +90,43 @@ def vocab_mapping(messages: list[str]):
                 i += 1
     return id_to_word, word_to_id
 
+def msg_to_rep(msg):
+    '''
+    return a list of word ids
+    '''
+    # rep = []
+    # for word in msg:
+    #     word_rep = [0]*vocab_size
+    #     word_rep[word_to_id[word]] = 1
+    #     rep.append(word_rep)
+    # return rep
+    return [word_to_id[word] for word in msg]
+
+def rep_to_msg(msg):
+    '''
+    return list of words from list of ids
+    '''
+    # return [id_to_word[torch.argmax(encoding)] for encoding in msg]
+    return [id_to_word[wid] for wid in msg]
+
+if __name__ == "__main__":
+    ethan_msgs = get_user_msgs_unlimited('whetan')
+    max_msg_len = max([len(i) for i in ethan_msgs])
+    for msg in ethan_msgs:
+        if len(msg) < max_msg_len:
+            msg += [' '] * (max_msg_len - len(msg))
+
+    id_to_word, word_to_id = vocab_mapping(ethan_msgs)
+
+    ethan_msgs_rep = [msg_to_rep(msg) for msg in ethan_msgs]
+
+    with open("ethan_msgs_rep.pkl", "wb") as f:
+        pickle.dump(ethan_msgs_rep, f)
+    with open("ethan_msgs.pkl", "wb") as f:
+        pickle.dump(ethan_msgs, f)
+    with open("id_to_word.pkl", "wb") as f:
+        pickle.dump(id_to_word, f)
+    with open("word_to_id.pkl", "wb") as f:
+        pickle.dump(word_to_id, f)
+
+    print("Done")
