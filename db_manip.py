@@ -111,12 +111,13 @@ def rep_to_msg(msg):
 
 if __name__ == "__main__":
     ethan_msgs = get_user_msgs_unlimited('whetan')
+
+    id_to_word, word_to_id = vocab_mapping(ethan_msgs)
+
     max_msg_len = max([len(i) for i in ethan_msgs])
     for msg in ethan_msgs:
         if len(msg) < max_msg_len:
             msg += [' '] * (max_msg_len - len(msg))
-
-    id_to_word, word_to_id = vocab_mapping(ethan_msgs)
 
     ethan_msgs_rep = [msg_to_rep(msg) for msg in ethan_msgs]
 
