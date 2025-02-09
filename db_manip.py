@@ -110,7 +110,7 @@ def rep_to_msg(msg):
     return [id_to_word[wid] for wid in msg]
 
 if __name__ == "__main__":
-    ethan_msgs = get_user_msgs('whetan', 50)
+    ethan_msgs = get_user_msgs_unlimited('whetan')
     max_msg_len = max([len(i) for i in ethan_msgs])
     for msg in ethan_msgs:
         if len(msg) < max_msg_len:
