@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
+from torch.cuda.amp import autocast, GradScaler
 from GPTethan import Transformer
 import random
 import pickle
@@ -29,13 +30,13 @@ tgt_data = train_data[len(train_data)//2:] # torch.randint(1, tgt_vocab_size, (6
 
 src_vocab_size = len(id_to_word) # 5000
 tgt_vocab_size = len(id_to_word) # 5000
-d_model = 512
-num_heads = 8
+d_model = 512 # 512
+num_heads = 8 # 8
 num_layers = 6
-d_ff = 2048
+d_ff = 1024 # 2048
 max_seq_length = len(ethan_msgs_rep[0])# 100
 dropout = 0.1
-batch_size = 32
+batch_size = 8
 
 print(f"{src_vocab_size=}, {max_seq_length=}, {len(ethan_msgs_rep)=}")
 
@@ -78,6 +79,7 @@ for epoch in range(100):
         total_loss += loss.item()
 
     print(f"Epoch {epoch+1}, Loss: {total_loss / len(train_loader):.4f}")
+    torch.cuda.empty_cache()
     # optimizer.zero_grad()
     # output = transformer(src_data, tgt_data[:, :-1])
     # loss = criterion(output.contiguous().view(-1, tgt_vocab_size), tgt_data[:, 1:].contiguous().view(-1))
