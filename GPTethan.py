@@ -129,10 +129,10 @@ class Transformer(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def generate_mask(self, src, target):
-        src_mask = (src != 0).unsqueeze(1).unsqueeze(2)
-        target_mask = (target != 0).unsqueeze(1).unsqueeze(3)
+        src_mask = (src != 0).unsqueeze(1).unsqueeze(2).to(src.device)
+        target_mask = (target != 0).unsqueeze(1).unsqueeze(3).to(target.device)
         seq_length = target.size(1)
-        nopeak_mask = (1 - torch.triu(torch.ones(1, seq_length, seq_length), diagonal=1)).bool()
+        nopeak_mask = (1 - torch.triu(torch.ones(1, seq_length, seq_length, device=target.device), diagonal=1)).bool()
         target_mask = target_mask & nopeak_mask
         return src_mask, target_mask
 
