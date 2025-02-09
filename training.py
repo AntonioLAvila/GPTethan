@@ -2,15 +2,38 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from GPTethan import Transformer
+import db_manip as db
 
-src_vocab_size = 5000
-tgt_vocab_size = 5000
-d_model = 512
+ethan_msgs = db.get_user_msgs_unlimited()
+id_to_word, word_to_id = db.vocab_mapping(ethan_msgs)
+
+src_vocab_size = len(id_to_word) # 5000
+tgt_vocab_size = len(id_to_word) # 5000
+d_model = 1024 # 512
 num_heads = 8
 num_layers = 6
-d_ff = 2048
-max_seq_length = 100
+d_ff = 4096 # 2048
+max_seq_length = max([len(i) for i in ethan_msgs]) # 100
 dropout = 0.1
+
+
+def msg_to_rep(msg):
+    '''
+    return a list of one hot word encodings
+    '''
+    rep = []
+    for word in msg:
+        word_rep = [0]*src_vocab_size
+        word_rep[word_to_id[word]] = 1
+        rep.append(word_rep)
+    return torch.tensor(rep)
+
+def rep_to_msg(msg):
+    '''
+    return list of words from one hot encodings
+    '''
+    return [id_to_word[torch.argmax(encoding)] for encoding in msg]
+
 
 transformer = Transformer(src_vocab_size, tgt_vocab_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout)
 
