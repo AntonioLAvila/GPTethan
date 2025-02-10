@@ -36,7 +36,7 @@ num_layers = 6
 d_ff = 1024
 max_seq_length = len(ethan_msgs_rep[0])# 100
 dropout = 0.1
-batch_size = 32
+batch_size = 16
 
 print(f"{src_vocab_size=}, {max_seq_length=}, {len(ethan_msgs_rep)=}")
 
@@ -88,7 +88,7 @@ for epoch in range(100):
     # print(f"Epoch: {epoch+1}, Loss: {loss.item()}")
 
 
-torch.save(transformer.state_dict(), "/home/antonio/GitHub/GPTethan")
+torch.save(transformer.state_dict(), "model.pth")
 
 # we dont do that here
 # val_src_data = torch.tensor(val_data[:len(val_data)//2]) # torch.randint(1, src_vocab_size, (64, max_seq_length))  # (batch_size, seq_length)
