@@ -12,15 +12,15 @@ with open("ethan_msgs_rep.pkl", "rb") as f:
 with open("tokenizer.pkl", "rb") as f:
     tokenizer = pickle.load(f)
 
-src_vocab_size = tgt_vocab_size = len(tokenizer.id_to_word) # 5000
+src_vocab_size = tgt_vocab_size = len(tokenizer.id_to_word)
 d_model = 1024
 num_heads = 8
 num_layers = 6
 d_ff = 2048
-max_seq_length = len(ethan_msgs_rep[0]) # 100
+max_seq_length = len(ethan_msgs_rep[0])
 dropout = 0.1
 batch_size = 16
-num_epochs = 100
+num_epochs = 250
 
 print(f"{src_vocab_size=}, {max_seq_length=}, {len(ethan_msgs_rep)=}")
 

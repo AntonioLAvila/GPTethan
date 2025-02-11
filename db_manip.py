@@ -84,20 +84,16 @@ def get_user_msgs_unlimited(username: str = 'whetan'):
 
 if __name__ == "__main__":
     ethan_msgs = get_user_msgs_unlimited('whetan')
-
+    
     tokenizer = Tokenizer()
-
-    tokenizer.fit(ethan_msgs)
     
     # Pad messages
     max_msg_len = max([len(i) for i in ethan_msgs])
     for msg in ethan_msgs:
         if len(msg) < max_msg_len:
-            length_to_extend = max_msg_len - len(msg)
-            msg.pop()
-            msg += ["<pad>"] * (length_to_extend)
-            msg += ["<eos>"]
+            msg += ["<pad>"] * (max_msg_len - len(msg))
     
+    tokenizer.fit(ethan_msgs)
     ethan_msgs_rep = [tokenizer.encode(msg) for msg in ethan_msgs]
 
     with open("ethan_msgs_rep.pkl", "wb") as f:
