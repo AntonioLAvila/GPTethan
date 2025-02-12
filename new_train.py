@@ -9,6 +9,8 @@ import pickle
 # Load data
 with open("ethan_msgs_rep.pkl", "rb") as f:
     ethan_msgs_rep = pickle.load(f)
+with open("ethan_msgs.pkl", "rb") as f:
+    ethan_msgs = pickle.load(f)
 with open("tokenizer.pkl", "rb") as f:
     tokenizer = pickle.load(f)
 

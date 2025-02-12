@@ -31,7 +31,6 @@ class ChatDataset(Dataset):
     def __getitem__(self, idx):
         msg = self.data[idx]
 
-        # Assuming <sos> is token 1 and <eos> is token 2 in tokenizer
         src = msg[:-1]  # Input (exclude <eos>)
         tgt = msg[1:]   # Target (exclude <sos>)
 

@@ -14,6 +14,28 @@ conn.commit()
 conn.close()
 
 
+def sanitize_messages(msgs: list[str]):
+    ret = []
+    for msg in msgs:
+        msg = msg.lower()
+        if "http" in msg: # ignore websites
+            continue
+
+        if re.search(r'\d{18}', msg): # replace user ids with their names
+            msg = re.sub(r'\b(' + '|'.join(map(re.escape, user_map.keys())) + r')\b', lambda m: user_map[m.group(0)], msg)
+
+        stripped = re.sub(r'[^a-zA-z\s1-9]+', '', msg) # strip output
+        if len(stripped) == 0:
+            continue
+        
+        temp = ["<sos>"]
+        temp += stripped.split()
+        temp.append("<eos>")
+
+        ret.append(temp)
+
+    return ret
+
 def get_user_msgs(username: str = 'whetan', number: int = 10):
     '''
     return a list of stripped user messages represented as a list of words
@@ -28,25 +50,7 @@ def get_user_msgs(username: str = 'whetan', number: int = 10):
     conn.commit()
     conn.close()
 
-    ret = []
-    for msg, in ethan_msgs:
-        if "http" in msg: # ignore websites
-            continue
-
-        if re.search(r'\d{18}', msg): # replace user ids with their names
-            msg = re.sub(r'\b(' + '|'.join(map(re.escape, user_map.keys())) + r')\b', lambda m: user_map[m.group(0)], msg)
-
-        stripped = re.sub(r'[^a-zA-z\s]+', '', msg) # strip output
-        if len(stripped) == 0:
-            continue
-        
-        temp = ["<sos>"]
-        temp += stripped.split()
-        temp.append("<eos>")
-
-        ret.append(temp)
-    
-    return ret
+    return sanitize_messages([i[0] for i in ethan_msgs])
 
 def get_user_msgs_unlimited(username: str = 'whetan'):
     '''
@@ -61,29 +65,13 @@ def get_user_msgs_unlimited(username: str = 'whetan'):
     ethan_msgs = c.execute(f"SELECT text FROM messages WHERE sender_id={ethan_id} ORDER BY timestamp").fetchall()
     conn.commit()
     conn.close()
-
-    ret = []
-    for msg, in ethan_msgs:
-        if "http" in msg: # ignore websites
-            continue
-
-        if re.search(r'\d{18}', msg): # replace user ids with their names
-            msg = re.sub(r'\b(' + '|'.join(map(re.escape, user_map.keys())) + r')\b', lambda m: user_map[m.group(0)], msg)
-
-        stripped = re.sub(r'[^a-zA-z\s]+', '', msg) # strip output
-        if len(stripped) == 0:
-            continue
-        
-        temp = ["<sos>"]
-        temp += stripped.split()
-        temp.append("<eos>")
-
-        ret.append(temp)
     
-    return ret
+    return sanitize_messages([i[0] for i in ethan_msgs])
 
 if __name__ == "__main__":
-    ethan_msgs = get_user_msgs_unlimited('whetan')
+    test_msgs = ["Shake down 1979, cool kids never have the time"] * 10
+
+    ethan_msgs = sanitize_messages(test_msgs)
     
     tokenizer = Tokenizer()
     
@@ -98,8 +86,8 @@ if __name__ == "__main__":
 
     with open("ethan_msgs_rep.pkl", "wb") as f:
         pickle.dump(ethan_msgs_rep, f)
-    # with open("ethan_msgs.pkl", "wb") as f:
-    #     pickle.dump(ethan_msgs, f)
+    with open("ethan_msgs.pkl", "wb") as f:
+        pickle.dump(ethan_msgs, f)
     with open("tokenizer.pkl", "wb") as f:
         pickle.dump(tokenizer, f)
 

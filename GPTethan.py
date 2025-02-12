@@ -3,7 +3,7 @@ import torch.nn as nn
 import numpy as np
 
 if torch.cuda.is_available():  
-  dev = "cuda:0" 
+  dev = "cuda" 
 else:  
   dev = "cpu"
 
@@ -127,6 +127,8 @@ class Transformer(nn.Module):
 
         self.fc = nn.Linear(d_model, target_vocab_size)
         self.dropout = nn.Dropout(dropout)
+
+        self.d_model = d_model
 
     def generate_mask(self, src, target):
         src_mask = (src != 0).unsqueeze(1).unsqueeze(2).to(src.device)

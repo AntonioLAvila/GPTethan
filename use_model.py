@@ -43,11 +43,14 @@ def generate_response(input_text: str, max_response_length=max_seq_length):
         next_token = tokenizer.id_to_word[next_token_id]
         
         if next_token == "<eos>":
-            break  # Stop if end token is reached
+            break
         
         response_tokens.append(next_token)
     
-    return tokenizer.decode(response_tokens[1:])  # Exclude <sos> from output
+    ret = ''
+    for i in response_tokens[1:]:
+        ret += i + ' '
+    return ret
 
 while True:
     user_input = input("You: ")
