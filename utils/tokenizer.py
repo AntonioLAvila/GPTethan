@@ -1,6 +1,6 @@
 import sqlite3
 import re
-from constants import DB, ethan_uname
+from utils.constants import DB, ethan_uname
 import bidict
 
 class Tokenizer:

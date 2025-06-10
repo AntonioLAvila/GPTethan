@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from GPTethan import Transformer
-from util import ChatDataset
+from utils.util import ChatDataset
 import pickle
 
 # Load data
