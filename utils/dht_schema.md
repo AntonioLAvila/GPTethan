@@ -16,6 +16,7 @@ Columns:
   - id (INTEGER)
   - name (TEXT)
   - type (TEXT)
+  - icon_hash (TEXT)
 
 Table: channels
 Columns:
@@ -68,19 +69,6 @@ Table: message_replied_to
 Columns:
   - message_id (INTEGER)
   - replied_to_id (INTEGER)
-
-Table: download_metadata
-Columns:
-  - normalized_url (TEXT)
-  - download_url (TEXT)
-  - status (INTEGER)
-  - type (TEXT)
-  - size (INTEGER)
-
-Table: download_blobs
-Columns:
-  - normalized_url (TEXT)
-  - blob (BLOB)
 
 Table: message_attachments
 Columns:
