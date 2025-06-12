@@ -27,6 +27,7 @@ def show_database_info():
 
 def get_message_data(msg_id: int):
     # return relevant message info
+    # TODO handle no text and unreachable messages
     conn = sqlite3.connect(DB)
     c = conn.cursor()
     sender_id, channel_id, text, timestamp = c.execute(
@@ -62,7 +63,7 @@ def remove_unreachable():
                 "DELETE FROM message_replied_to WHERE message_id=? OR replied_to_id=?;",
                 (msg_id, msg_id)
             )
-            conn.commit()
+            # conn.commit()
             conn.close()
 
     conn = sqlite3.connect(DB)
@@ -83,12 +84,13 @@ def find_root_message(msg_id: int, reply_map: dict, user_id: int):
     return msg_id
 
 
-def dfs(root_msg_id: int, reply_tree: dict, user_id: int, visited: set):
+def dfs(root_msg_id: int, reply_tree: dict, user_id: int):
     concatenated_replies = []
     s = [[root_msg_id]]
+    visited = set()
     visited.add(root_msg_id)
     while s:
-        curr = s.pop(-1)
+        curr = s.pop()
         if curr[-1] not in reply_tree: # if leaf concatenate responses
             concatenated_replies.append(concatenate_replies(curr[1:]))
             continue
@@ -100,8 +102,7 @@ def dfs(root_msg_id: int, reply_tree: dict, user_id: int, visited: set):
                 concatenated_replies.append(concatenate_replies(curr[1:]))
                 continue
             else: # if the next reply is still from the target user continue
-                curr.append(child)
-                s.append(curr)
+                s.append(curr + [child])
     
     return concatenated_replies
 
@@ -117,18 +118,16 @@ def parse_replies(user_id: int):
     reply_table = c.execute("SELECT message_id, replied_to_id FROM message_replied_to;").fetchall()
     conn.close()
 
-    all_msgs = set()
+    all_replies = set()
     reply_map = {}
     reply_tree = defaultdict(list)
     for reply, replied_to in reply_table:
         reply_map[reply] = replied_to
         reply_tree[replied_to].append(reply)
-        all_msgs.add(reply)
-        all_msgs.add(replied_to)
+        all_replies.add(reply)
 
-    prompts_and_repsonses = []
-    visited = set()
-    for msg_id in all_msgs:
+    prompts_and_responses = []
+    for msg_id in all_replies:
         # skip if not user of interest
         if get_message_data(msg_id).sender_id != user_id:
             continue
@@ -138,13 +137,15 @@ def parse_replies(user_id: int):
         prompt = get_message_data(root_msg_id).text
 
         # traverse down and concatenate
-        responses = dfs(root_msg_id, reply_tree, user_id, visited)
+        responses = dfs(root_msg_id, reply_tree, user_id)
 
-        prompts_and_repsonses.append((prompt, responses))
+        prompts_and_responses.append((prompt, responses))
 
-    return prompts_and_repsonses, reply_map
+    return prompts_and_responses, reply_map
+
+def parse_database(user_id: int):
+    replies_prompts_and_responses, reply_map = parse_replies(user_id)
     
 
 if __name__ == "__main__":
-    data, _ = parse_replies(ethan_id)
-    print(data)
+    pass
