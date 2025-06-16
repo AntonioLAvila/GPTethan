@@ -196,7 +196,7 @@ def parse_replies(user_id: int):
         # find root message
         root_msg_id = find_root_reply_msg(msg_id, reply_map)
         prompt = get_message_data(root_msg_id).text
-        if not prompt: # skip if empty
+        if not prompt.strip(): # skip if empty
             continue
 
         # traverse down and concatenate
@@ -208,7 +208,7 @@ def parse_replies(user_id: int):
         if len(responses_filtered) < 1:
             continue
 
-        prompts_and_responses.append((prompt, responses))
+        prompts_and_responses.append((prompt, responses_filtered))
 
     return prompts_and_responses, reply_map
 
@@ -235,7 +235,7 @@ def aggregate_down(root_msg_id: int, user_id: int, visited: set):
         if next_msg is None:
             return None
         visited.add(next_msg)
-        if not get_message_data(next_msg).text:
+        if not get_message_data(next_msg).text.strip():
             return None
         if get_message_data(next_msg).sender_id != user_id:
             break
@@ -269,12 +269,14 @@ def parse_database(user_id: int):
 
         # concatenate response
         messages = aggregate_down(root_msg_id, user_id, visited)
-        if messages is None:
+        if messages is None or len(messages) < 1:
             continue
         response = ''
         for msg in messages:
-            if msg:
+            if msg.strip():
                 response += msg
+        if not response.strip():
+            continue
         
         prompts_and_responses.append((prompt, [response]))
 
@@ -283,5 +285,9 @@ def parse_database(user_id: int):
 
 if __name__ == "__main__":
     data = parse_database(ethan_id)
-    for p, r in data:
-        print(p, r)
+    with open('data.txt', 'w') as f:
+        for prompt, responses in data:
+            for response in responses:
+                f.write(prompt + "\n")
+                f.write(response + "\n")
+                f.write("\n")
