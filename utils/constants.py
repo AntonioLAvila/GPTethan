@@ -8,3 +8,5 @@ max_seq = 1000
 staleness = 60*60*24*5 # 5 days
 
 data_dir = "/home/antonio/GitHub/GPTethan/data.txt"
+
+model_out_path = "/home/antonio/"

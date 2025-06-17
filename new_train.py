@@ -1,9 +1,10 @@
 import torch
 from model.gpt import GPT
 from utils.util import build_dataset_and_tokenizer
-from utils.constants import data_dir
+from utils.constants import data_dir, model_out_path
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from clearml import Task
 
 def train():
     dataset, tokenizer = build_dataset_and_tokenizer(data_dir)
@@ -29,6 +30,12 @@ def train():
 
     train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 
+    cml_task = Task.init(
+        project_name="GPTethan",
+        task_name="training",
+        task_type=Task.TaskTypes.training
+    )
+
     model = GPT(
         vocab_size=tokenizer.get_vocab_size(),
         d_model=d_model,
@@ -38,7 +45,7 @@ def train():
         dropout=dropout
     ).cuda()
 
-    criterion = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.token_to_id("[PAD]"))
+    criterion = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.token_to_id("[PAD]"), reduction='none')
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
     model.train()
@@ -58,11 +65,21 @@ def train():
             loss_all = criterion(logits_flat, y_flat)  # loss for all tokens
             loss = (loss_all * mask_flat).sum() / mask_flat.sum()  # mask out prompt tokens
 
+            total_loss += loss.item()
+            cml_task.get_logger().report_scalar(
+                title='loss',
+                series='training',
+                value=loss.item(),
+                iteration=epoch
+            )
+
             loss.backward()
             optimizer.step()
 
         avg_loss = total_loss / len(train_loader)
         print(f"Epoch {epoch + 1}/{epochs} - Loss: {avg_loss:.4f}")
+
+    torch.save(model.state_dict(), model_out_path)
 
 
 if __name__ == "__main__":
