@@ -288,6 +288,6 @@ if __name__ == "__main__":
     with open('data.txt', 'w') as f:
         for prompt, responses in data:
             for response in responses:
-                f.write(prompt + "\n")
-                f.write(response + "\n")
+                f.write("[OTHER] " + prompt + "\n")
+                f.write("[ME] " + response + "\n")
                 f.write("\n")
