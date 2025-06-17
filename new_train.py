@@ -8,10 +8,11 @@ from clearml import Task
 
 def train():
     dataset, tokenizer = build_dataset_and_tokenizer(data_dir)
+    print(f"Vocab size: {tokenizer.get_vocab_size()}")
 
     batch_size = 8
     epochs = 10000
-    lr = 3e-4
+    lr = 1e-5
     d_model = 768
     d_ff = 4 * d_model
     n_layer = 6

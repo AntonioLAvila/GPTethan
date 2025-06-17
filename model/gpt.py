@@ -31,11 +31,6 @@ class TransformerDecoderBlock(nn.Module):
             nn.Dropout(dropout)
         )
 
-    # def forward(self, x):
-    #     attn_out, _ = self.attn(self.norm1(x), self.norm1(x), self.norm1(x), attn_mask=self._causal_mask(x.size(1), x.device))
-    #     x += self.dropout(attn_out)
-    #     x += self.mlp(self.norm2(x))
-    #     return x
     def forward(self, x):
         x_norm = self.norm1(x)
         x_t = x_norm.transpose(0, 1)  # (T, B, D)
@@ -47,9 +42,11 @@ class TransformerDecoderBlock(nn.Module):
         x = x + self.mlp(self.norm2(x))
         return x
 
-
     def _causal_mask(self, size, device):
-        return torch.tril(torch.ones(size, size, device=device)).bool()
+        mask = torch.tril(torch.ones(size, size, device=device))
+        mask = mask.masked_fill(mask == 0, float('-inf'))
+        mask = mask.masked_fill(mask == 1, float(0.0))
+        return mask
     
 
 class GPT(nn.Module):
