@@ -1,67 +1,69 @@
 import torch
-import torch.nn as nn
-import torch.optim as optim
+from model.gpt import GPT
+from utils.util import build_dataset_and_tokenizer
+from utils.constants import data_dir
 from torch.utils.data import DataLoader
-from GPTethan import Transformer
-from utils.util import ChatDataset
-import pickle
+from tqdm import tqdm
 
-# Load data
-with open("ethan_msgs_rep.pkl", "rb") as f:
-    ethan_msgs_rep = pickle.load(f)
-with open("ethan_msgs.pkl", "rb") as f:
-    ethan_msgs = pickle.load(f)
-with open("tokenizer.pkl", "rb") as f:
-    tokenizer = pickle.load(f)
+def train():
+    dataset, tokenizer = build_dataset_and_tokenizer(data_dir)
 
-src_vocab_size = tgt_vocab_size = len(tokenizer.id_to_word)
-d_model = 1024
-num_heads = 8
-num_layers = 6
-d_ff = 2048
-max_seq_length = len(ethan_msgs_rep[0])
-dropout = 0.1
-batch_size = 16
-num_epochs = 250
+    batch_size = 8
+    epochs = 10000
+    lr = 3e-4
+    d_model = 768
+    d_ff = 4 * d_model
+    n_layer = 6
+    n_head = 6
+    dropout = 0.1
 
-print(f"{src_vocab_size=}, {max_seq_length=}, {len(ethan_msgs_rep)=}")
+    # Pad/truncate sequences in batch with collate_fn
+    pad_id = tokenizer.token_to_id("[PAD]")
+    def collate_fn(batch):
+        inputs, targets, masks = zip(*batch)
+        inputs = torch.nn.utils.rnn.pad_sequence(inputs, batch_first=True, padding_value=pad_id)
+        targets = torch.nn.utils.rnn.pad_sequence(targets, batch_first=True, padding_value=pad_id)
+        masks = torch.nn.utils.rnn.pad_sequence(masks, batch_first=True, padding_value=0)
+        return inputs, targets, masks
 
-# Create model
-transformer = Transformer(src_vocab_size, tgt_vocab_size, d_model, num_heads, num_layers, d_ff, max_seq_length, dropout).to('cuda')
 
-# Create dataset and dataloader
-dataset = ChatDataset(ethan_msgs_rep)
-dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 
-pad_token_id = tokenizer.word_to_id['<pad>']
+    model = GPT(
+        vocab_size=tokenizer.get_vocab_size(),
+        d_model=d_model,
+        d_ff=d_ff,
+        n_layers=n_layer,
+        n_heads=n_head,
+        dropout=dropout
+    ).cuda()
 
-criterion = nn.CrossEntropyLoss(ignore_index=pad_token_id)
-optimizer = optim.Adam(transformer.parameters(), lr=5e-4, betas=(0.9, 0.98), eps=1e-9)
+    criterion = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.token_to_id("[PAD]"))
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
-transformer.train()
+    model.train()
+    for epoch in tqdm(range(epochs)):
+        total_loss = 0
+        for x, y, mask in train_loader:
+            x, y, mask = x.cuda(), y.cuda(), mask.cuda()
 
-# Train
-print("Starting training loop")
-for epoch in range(num_epochs):
-    transformer.train()
-    total_loss = 0
+            optimizer.zero_grad()
+            logits = model(x)  # (B, T, vocab_size)
 
-    for src, tgt in dataloader:
-        src, tgt = src.to('cuda'), tgt.to('cuda')
+            # Flatten logits and targets
+            logits_flat = logits.view(-1, logits.size(-1))
+            y_flat = y.view(-1)
+            mask_flat = mask.view(-1)
 
-        optimizer.zero_grad()
+            loss_all = criterion(logits_flat, y_flat)  # loss for all tokens
+            loss = (loss_all * mask_flat).sum() / mask_flat.sum()  # mask out prompt tokens
 
-        output = transformer(src, tgt[:, :-1])  # Shifted target input
-        loss = criterion(output.view(-1, output.shape[-1]), tgt[:, 1:].reshape(-1))  # Ignore first token
+            loss.backward()
+            optimizer.step()
 
-        loss.backward()
-        optimizer.step()
+        avg_loss = total_loss / len(train_loader)
+        print(f"Epoch {epoch + 1}/{epochs} - Loss: {avg_loss:.4f}")
 
-        total_loss += loss.item()
 
-    avg_loss = total_loss / len(dataloader)
-    print(f"Epoch {epoch+1}/{num_epochs}, Loss: {avg_loss:.4f}")
-
-# Save model
-torch.save(transformer.state_dict(), "model.pth")
-
+if __name__ == "__main__":
+    train()

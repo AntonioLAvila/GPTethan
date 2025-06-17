@@ -21,18 +21,29 @@ class ChatDataset(Dataset):
             self.file = f.readlines()
 
     def __len__(self):
-        return len(self.file) / 3
+        return len(self.file) // 3
 
     def __getitem__(self, idx):
         line_idx = idx*3
 
-        prompt = self.file[line_idx]
-        response = self.file[line_idx+1]
+        prompt = self.file[line_idx][:-1]
+        response = self.file[line_idx+1][:-1]
 
-        encoded_prompt = self.tokenizer.encode(prompt)
-        encoded_response = self.tokenizer.encode(response)
+        sos_id = self.tokenizer.token_to_id("[SOS]")
+        eos_id = self.tokenizer.token_to_id("[EOS]")
+        pad_id = self.tokenizer.token_to_id("[PAD]")
 
-        return torch.tensor(encoded_prompt), torch.tensor(encoded_response)
+        prompt_ids = self.tokenizer.encode(prompt).ids
+        response_ids = self.tokenizer.encode(response).ids
+
+        input_ids = [sos_id] + prompt_ids + [eos_id] + response_ids
+        target_ids = input_ids[1:] + [pad_id]
+
+        loss_mask = [0]*(len(prompt_ids) + 2) + [1]*len(response_ids)
+
+        return torch.tensor(input_ids, dtype=torch.long),\
+            torch.tensor(target_ids, dtype=torch.long),\
+            torch.tensor(loss_mask, dtype=torch.bool)
     
 
 def build_tokeizer(data_dir):
@@ -41,6 +52,21 @@ def build_tokeizer(data_dir):
     tokenizer.train(files=[data_dir], trainer=trainer)
     tokenizer.save("tokenizer")
     return tokenizer
+
+
+def build_dataset_and_tokenizer(data_dir):
+    tokenizer = build_tokeizer(data_dir)
+    dataset = ChatDataset(data_dir, tokenizer)
+    return dataset, tokenizer
+
+
+# if __name__ == "__main__":
+#     from constants import data_dir
+#     with open(data_dir, 'r') as f:
+#             for i, line in enumerate(f):
+#                 if i == 0:
+#                     if line[-1] == '\n':
+#                         print('newline')
 
 
 # class Tokenizer:
