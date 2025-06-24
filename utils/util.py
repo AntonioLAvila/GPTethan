@@ -3,6 +3,10 @@ import torch
 from tokenizers import Tokenizer
 from tokenizers.trainers import BpeTrainer
 from tokenizers.models import BPE
+from tokenizers.pre_tokenizers import Whitespace
+from tokenizers.processors import TemplateProcessing
+from tokenizers.normalizers import Lowercase, NFD, StripAccents, Sequence
+from utils.constants import max_len
 
 
 class MessageData():
@@ -16,40 +20,50 @@ class MessageData():
 class ChatDataset(Dataset):
     def __init__(self, data_dir: str, tokenizer: Tokenizer):
         self.tokenizer = tokenizer
-        # read file into memory
-        with open(data_dir, 'r') as f:
-            self.file = f.readlines()
+        self.samples = load_dataset(data_dir)
 
     def __len__(self):
-        return len(self.file) // 3
+        return len(self.samples)
 
     def __getitem__(self, idx):
-        line_idx = idx*3
+        prompt, response = self.samples[idx]
+        full_input = f"{prompt} [EOS] {response}"
+        encoded = self.tokenizer.encode(full_input)
 
-        prompt = self.file[line_idx][:-1]
-        response = self.file[line_idx+1][:-1]
+        ids = encoded.ids[:max_len]
+        pad_len = max_len - len(ids)
+        input_ids = ids + [self.tokenizer.token_to_id("[PAD]")] * pad_len
 
-        sos_id = self.tokenizer.token_to_id("[SOS]")
-        eos_id = self.tokenizer.token_to_id("[EOS]")
-        pad_id = self.tokenizer.token_to_id("[PAD]")
-
-        prompt_ids = self.tokenizer.encode(prompt).ids
-        response_ids = self.tokenizer.encode(response).ids
-
-        input_ids = [sos_id] + prompt_ids + [eos_id] + response_ids
-        target_ids = input_ids[1:] + [pad_id]
-
-        loss_mask = [0]*(len(prompt_ids) + 2) + [1]*len(response_ids)
-
-        return torch.tensor(input_ids, dtype=torch.long),\
-            torch.tensor(target_ids, dtype=torch.long),\
-            torch.tensor(loss_mask, dtype=torch.bool)
+        x = torch.tensor(input_ids[:-1])  # model input
+        y = torch.tensor(input_ids[1:])  # target (next token prediction)
+        return x, y
     
 
+def load_dataset(path):
+    with open(path, 'r', encoding='utf-8') as f:
+        lines = [line.strip() for line in f.readlines()]
+    samples = [(lines[i], lines[i+1]) for i in range(0, len(lines), 3)]
+    return samples
+
+
 def build_tokeizer(data_dir):
-    tokenizer = Tokenizer(BPE())
-    trainer = BpeTrainer(special_tokens=["[PAD]", "[SOS]", "[EOS]", "[OTHER]", "[ME]"])
-    tokenizer.train(files=[data_dir], trainer=trainer)
+    tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
+    tokenizer.normalizer = Sequence([NFD(), Lowercase(), StripAccents()])
+    tokenizer.pre_tokenizer = Whitespace()
+
+    trainer = BpeTrainer(special_tokens=["[PAD]", "[UNK]", "[BOS]", "[EOS]"])
+    samples = load_dataset(data_dir)
+    texts = [prompt for prompt, _ in samples] + [response for _, response in samples]
+
+    tokenizer.train_from_iterator(texts, trainer=trainer)
+
+    tokenizer.post_processor = TemplateProcessing(
+        single="[BOS] $A [EOS]",
+        pair="[BOS] $A [EOS] $B:1 [EOS]:1",
+        special_tokens=[("[BOS]", tokenizer.token_to_id("[BOS]")),
+                        ("[EOS]", tokenizer.token_to_id("[EOS]"))]
+    )
+
     tokenizer.save("tokenizer")
     return tokenizer
 
