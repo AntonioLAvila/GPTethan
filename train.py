@@ -8,7 +8,7 @@ from clearml import Task
 
 def main(arg):
     dataset, tokenizer = build_dataset_and_tokenizer(data_dir)
-    loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
+    loader = DataLoader(dataset, batch_size=batch_size)
     model = GPT(
         vocab_size=tokenizer.get_vocab_size(),
         d_model=d_model,
@@ -42,7 +42,7 @@ def train(model: torch.nn.Module, loader, tokenizer):
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
-            
+
             cml_task.get_logger().report_scalar(
                 title='loss',
                 series='train',
