@@ -48,7 +48,7 @@ class ChatDataset(Dataset):
 
 def build_tokeizer(data_dir):
     tokenizer = Tokenizer(BPE())
-    trainer = BpeTrainer(special_tokens=["[UNK]", "[PAD]", "[SOS]", "[EOS]", "[OTHER]", "[ME]"])
+    trainer = BpeTrainer(special_tokens=["[PAD]", "[SOS]", "[EOS]", "[OTHER]", "[ME]"])
     tokenizer.train(files=[data_dir], trainer=trainer)
     tokenizer.save("tokenizer")
     return tokenizer

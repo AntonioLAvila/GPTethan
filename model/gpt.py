@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import numpy as np
 
 
 def get_sinusoidal_encoding(seq_len, d_model, device):
@@ -19,34 +20,25 @@ class TransformerDecoderBlock(nn.Module):
     def __init__(self, d_ff, d_model, n_heads, dropout):
         super().__init__()
         self.norm1 = nn.LayerNorm(d_model)
-        self.attn = nn.MultiheadAttention(d_model, n_heads, dropout)
+        self.attn = nn.MultiheadAttention(d_model, n_heads, dropout=dropout, batch_first=True)
         self.dropout = nn.Dropout(dropout)
-
         self.norm2 = nn.LayerNorm(d_model)
         self.mlp = nn.Sequential(
             nn.Linear(d_model, d_ff),
             nn.GELU(),
-            nn.Dropout(dropout),
             nn.Linear(d_ff, d_model),
             nn.Dropout(dropout)
         )
 
     def forward(self, x):
-        x_norm = self.norm1(x)
-        x_t = x_norm.transpose(0, 1)  # (T, B, D)
-
-        attn_out, _ = self.attn(x_t, x_t, x_t, attn_mask=self._causal_mask(x.size(1), x.device))
-        attn_out = attn_out.transpose(0, 1)  # (B, T, D)
-
+        # x is (batch, seq_len)
+        seq_len = x.shape[1]
+        attn_mask = torch.triu(torch.ones(seq_len, seq_len, device=x.device), diagonal=1).bool()
+        x = self.norm1(x)
+        attn_out, _ = self.attn(x, x, x, attn_mask=attn_mask)
         x = x + self.dropout(attn_out)
         x = x + self.mlp(self.norm2(x))
         return x
-
-    def _causal_mask(self, size, device):
-        mask = torch.tril(torch.ones(size, size, device=device))
-        mask = mask.masked_fill(mask == 0, float('-inf'))
-        mask = mask.masked_fill(mask == 1, float(0.0))
-        return mask
     
 
 class GPT(nn.Module):
@@ -60,11 +52,10 @@ class GPT(nn.Module):
 
     def forward(self, x):
         B, T = x.shape
-        token_embeddings = self.token_embed(x)
-        pos_enc = get_sinusoidal_encoding(T, token_embeddings.size(-1), x.device)
-        x = token_embeddings + pos_enc
-        x = self.dropout(x)
+        token_embeddings = self.token_embed(x) # (B, T, D)
+        pos_embeddings = get_sinusoidal_encoding(T, token_embeddings.shape[-1], x.device) # (1, T, D)
+        x = self.dropout(token_embeddings + pos_embeddings)
         x = self.blocks(x)
         x = self.norm(x)
-        logits = self.head(x)
+        logits = self.head(x) # (B, T, vocab_size)
         return logits
