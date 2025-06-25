@@ -46,7 +46,7 @@ def load_dataset(path):
     return samples
 
 
-def build_tokeizer(data_dir):
+def build_tokeizer(data_dir, tokenizer_path):
     tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
     tokenizer.normalizer = Sequence([NFD(), Lowercase(), StripAccents()])
     tokenizer.pre_tokenizer = Whitespace()
@@ -64,14 +64,21 @@ def build_tokeizer(data_dir):
                         ("[EOS]", tokenizer.token_to_id("[EOS]"))]
     )
 
-    tokenizer.save("tokenizer")
+    tokenizer.save(tokenizer_path)
     return tokenizer
+
+
+def build_dataset(data_dir, tokenizer):
+    return ChatDataset(data_dir, tokenizer)
 
 
 def build_dataset_and_tokenizer(data_dir):
     tokenizer = build_tokeizer(data_dir)
-    dataset = ChatDataset(data_dir, tokenizer)
-    return dataset, tokenizer
+    return build_dataset(data_dir, tokenizer), tokenizer
+
+
+def load_tokenizer(tokenizer_dir):
+    return Tokenizer.from_file(tokenizer_dir)
 
 
 # if __name__ == "__main__":

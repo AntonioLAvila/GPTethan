@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import numpy as np
 
 
 def get_sinusoidal_encoding(seq_len, d_model, device):

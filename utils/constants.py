@@ -3,7 +3,7 @@ ethan_id = 791492026986135592
 ethan_name = 'whetan'
 staleness = 60*60*24*5 # 5 days
 
-data_dir = "/home/antonio/GitHub/GPTethan/data.txt"
+data_dir = "data.txt"
 
 d_model = 510
 d_ff = 4*d_model
@@ -15,4 +15,5 @@ max_len = 1024
 batch_size = 8
 lr = 1e-5
 
-model_path = "/home/antonio/"
+model_path = "ethan.pt"
+tokenizer_path = "tokenizer.json"

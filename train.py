@@ -1,16 +1,23 @@
 import torch
 from model.gpt import GPT
-from utils.util import build_dataset_and_tokenizer
-from utils.constants import data_dir, model_path, batch_size, lr, d_model, d_ff, n_layers, n_heads, dropout, max_len
+from utils.util import build_dataset_and_tokenizer, build_dataset, load_tokenizer
+from utils.constants import data_dir, model_path, batch_size, lr, d_model, d_ff, n_layers, n_heads, dropout, max_len, tokenizer_path
 from torch.utils.data import DataLoader
+from tokenizers import Tokenizer
 from tqdm import tqdm
 from clearml import Task
+import atexit
 
 def main(arg):
-    dataset, tokenizer = build_dataset_and_tokenizer(data_dir)
+    try:
+        tokenizer = load_tokenizer(tokenizer_path)
+        dataset = build_dataset(data_dir, tokenizer)
+    except:
+        dataset, tokenizer = build_dataset_and_tokenizer(data_dir, tokenizer_path)
     loader = DataLoader(dataset, batch_size=batch_size)
+
     model = GPT(
-        vocab_size=tokenizer.get_vocab_size(),
+        vocab_size=tokenizer.get_vocab_size(), # TODO assumes you used the same tokenizer/data
         d_model=d_model,
         d_ff=d_ff,
         n_layers=n_layers,
@@ -26,10 +33,12 @@ def main(arg):
         inference(model, tokenizer, prompt)
     
 
-def train(model: torch.nn.Module, loader, tokenizer):
+def train(model: torch.nn.Module, loader: DataLoader, tokenizer: Tokenizer):
     cml_task = Task.init(project_name="GPTethan", task_name="training", task_type=Task.TaskTypes.training)
     criterion = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.token_to_id("[PAD]"))
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+
+    atexit.register(lambda: torch.save(model.state_dict(), model_path))
 
     model.train()
     for epoch in tqdm(range(10000)):
@@ -51,10 +60,10 @@ def train(model: torch.nn.Module, loader, tokenizer):
             )
         print(f"Epoch {epoch+1} Loss: {total_loss / len(loader):.4f}")
 
-    torch.save(model.state_dict(), model_path)
+    # torch.save(model.state_dict(), model_path)
 
 
-def inference(model, tokenizer, prompt):
+def inference(model: torch.nn.Module, tokenizer: Tokenizer, prompt: str):
     model.eval()
     input_ids = tokenizer.encode(prompt).ids
     input_ids = [tokenizer.token_to_id("[BOS]")] + input_ids + [tokenizer.token_to_id("[EOS]")]
